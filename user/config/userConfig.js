@@ -1,0 +1,3 @@
+const USER_CONFIG_DETAILS = {
+    "USER_SQS_QUEUE_EVENT_TYPE": ""
+}
