@@ -9,9 +9,22 @@ app.use(express.json());
 
 app.use("/api/users", userRoute);
 
+app.use((req, res, next) => {
+    console.log("REQUEST:", req.method, req.url);
+    next();
+});
+
+app.get("/", (req, res) => {
+    console.log("ROOT HIT");
+    return res.status(200).json({
+        message: "Dineout API running!"
+    });
+});
+
 const PORT = 4000;
 app.listen(PORT,async ()=>{
     await db.conncet();
-    await process_Queue();
     console.log(`Server Running On Port ${parseInt(PORT)||process.env.PORT}`)
 });
+console.log("INDEX FILE LOADED");
+process_Queue();

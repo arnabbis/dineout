@@ -38,6 +38,32 @@ class BaseModel {
         return {delete:true};
     }
 
+    async deleteAllData() {
+
+    const result = await docClient.send(
+        new ScanCommand({
+            TableName: this.tableName
+        })
+    );
+
+    const items = result.Items || [];
+
+    for (const item of items) {
+        await docClient.send(
+            new DeleteCommand({
+                TableName: this.tableName,
+                Key: {
+                    email: item.email
+                }
+            })
+        );
+    }
+
+    return {
+        deletedCount: items.length
+    };
+}
+
 }
 
 export default BaseModel;

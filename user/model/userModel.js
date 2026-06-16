@@ -22,6 +22,7 @@ class UserModel extends BaseModel {
       semesterFees: user.semesterFees,
       totalFees: user.totalFees,
       image:user.image,
+      password: user.password,
       registeredAt: new Date().toISOString(),
     };
 
@@ -34,6 +35,10 @@ class UserModel extends BaseModel {
 
    async deleteByEmail(email){
       return this.deleteData({email});
+   }
+
+   async deleteAllDataFromTable(){
+      return this.deleteAllData();
    }
 }
 

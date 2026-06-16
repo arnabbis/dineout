@@ -1,12 +1,14 @@
 import User from "../model/userModel.js";
+import bcrypt from "bcrypt";
 import { sendWelcomeMail } from "../service/SnsService.js";
 import { uploadImageInS3 } from "../service/S3Service.js";
-import {push_To_Queue} from "../service/sqsSevice.js"
+import { push_To_Queue } from "../service/sqsSevice.js";
 
 export const registerUser = async (req, res) => {
   try {
     const courseList = ["BCA", "BTECH", "MBA", "BBA"];
-    const { name, email, phone, city, course, semesterFees } = req.body;
+    const { name, email, phone, city, course, semesterFees, password } =
+      req.body;
     const file = req.file;
     if (!file) {
       return res.status(400).json({
@@ -15,10 +17,10 @@ export const registerUser = async (req, res) => {
       });
     }
     console.log("file data....{}", file);
-    if (!name || !email) {
+    if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        error: "Name and email are required",
+        error: "Name, email and password are required",
       });
     }
 
@@ -41,6 +43,7 @@ export const registerUser = async (req, res) => {
       BTECH: 4,
       BBA: 3,
     };
+    const getHexPassword = await bcrypt.hash(password, 10);
     const getTotalYearsSalary = parseInt(semesterFees) * 2;
     const getTotalFees = getTotalYearsSalary * yearsForDegress[course];
     const getImageUrl = await uploadImageInS3(file);
@@ -53,6 +56,7 @@ export const registerUser = async (req, res) => {
       semesterFees: parseInt(semesterFees),
       totalFees: getTotalFees,
       image: getImageUrl,
+      password: getHexPassword,
     });
     await push_To_Queue(user);
     res.status(201).json({
@@ -129,12 +133,72 @@ export const deleteUser = async (req, res) => {
 
     await User.deleteData({ email });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: `User ${email} deleted successfully`,
     });
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
+export const deleteAllUser = async (req, res) => {
+  try {
+    console.log("request params url:....", req.url);
+    const user = await User.deleteAllDataFromTable();
+    if (user.deletedCount == 0) {
+      return res.status(404).json({
+        success: false,
+        error: "No Users data found",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      message: `All Users deleted successfully`,
+    });
+  } catch (err) {
+    console.log("Error:", err.message);
+     return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
+export const LoginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: "Email and password are required",
+      });
+    }
+    const findUser = await User.getUserByEmail(email);
+    if (!findUser) {
+      return res.status(404).json({
+        success: false,
+        error: "This Email Doesnot exits",
+      });
+    }
+
+    const getPassword = findUser.password || null;
+    const isMatch = await bcrypt.compare(password, getPassword);
+    if (!isMatch) {
+      return res.status(401).json({
+        message: "Invalid credentials",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      message: `User login successfull`,
+    }); 
+  } catch (err) {
+    console.log("Error..{}", err.message);
+    return res.status(500).json({
       success: false,
       error: err.message,
     });
